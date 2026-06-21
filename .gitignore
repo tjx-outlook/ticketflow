@@ -1,0 +1,27 @@
+# Java
+ticketflow/target/
+ticketflow/.mvn/wrapper/maven-wrapper.jar
+
+# Node
+ticketflow-ui/node_modules/
+ticketflow-ui/dist/
+
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.classpath
+.project
+.settings
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log
+*.tmp
+GenBcrypt.class
+cp.txt

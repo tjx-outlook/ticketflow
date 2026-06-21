@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TicketFlow API 文档</title>
+<style>
+:root {
+  --bg: #0f172a; --card: #1e293b; --border: #334155;
+  --text: #e2e8f0; --muted: #94a3b8; --blue: #3b82f6;
+  --green: #22c55e; --amber: #f59e0b; --red: #ef4444; --purple: #8b5cf6;
+}
+* { margin:0; padding:0; box-sizing:border-box }
+body { font-family:system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.6 }
+.header { background:var(--card); border-bottom:1px solid var(--border); padding:24px 32px; position:sticky; top:0; z-index:10 }
+.header h1 { font-size:24px; color:#fff }
+.header p { color:var(--muted); font-size:14px; margin-top:4px }
+.container { max-width:1100px; margin:0 auto; padding:24px }
+.section { margin-bottom:32px }
+.section h2 { font-size:18px; color:var(--blue); padding-bottom:8px; border-bottom:1px solid var(--border); margin-bottom:16px }
+.endpoint { background:var(--card); border:1px solid var(--border); border-radius:10px; margin-bottom:12px; overflow:hidden }
+.ep-header { display:flex; align-items:center; gap:12px; padding:14px 18px; cursor:pointer; user-select:none }
+.ep-header:hover { background:rgba(255,255,255,.02) }
+.ep-method { padding:4px 12px; border-radius:6px; font-size:12px; font-weight:700; font-family:monospace; min-width:60px; text-align:center }
+.ep-method.get { background:rgba(34,197,94,.15); color:var(--green) }
+.ep-method.post { background:rgba(59,130,246,.15); color:var(--blue) }
+.ep-method.put { background:rgba(245,158,11,.15); color:var(--amber) }
+.ep-method.delete { background:rgba(239,68,68,.15); color:var(--red) }
+.ep-path { font-family:monospace; font-size:14px; color:#fff; flex:1 }
+.ep-summary { font-size:13px; color:var(--muted) }
+.ep-body { padding:0 18px 16px; display:none; border-top:1px solid var(--border) }
+.ep-body.open { display:block }
+.ep-body h4 { font-size:12px; color:var(--muted); margin:12px 0 6px; text-transform:uppercase; letter-spacing:.5px }
+.ep-body code { display:block; background:rgba(0,0,0,.3); padding:10px 14px; border-radius:6px; font-size:12px; color:#e2e8f0; white-space:pre-wrap; word-break:break-all }
+.tag { display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:600; margin-right:4px }
+.tag.auth { background:rgba(239,68,68,.15); color:var(--red) }
+.tag.public { background:rgba(34,197,94,.15); color:var(--green) }
+.params-table { width:100%; font-size:12px; border-collapse:collapse; margin-top:8px }
+.params-table th { text-align:left; color:var(--muted); padding:6px 8px; border-bottom:1px solid var(--border); font-weight:500 }
+.params-table td { padding:6px 8px; border-bottom:1px solid rgba(51,65,85,.5); font-family:monospace; font-size:12px }
+.params-table td:last-child { color:var(--muted); font-family:system-ui }
+.base-url { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px 18px; margin-bottom:20px; font-family:monospace; font-size:14px }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🎫 TicketFlow API 文档</h1>
+  <p>高并发票务系统 · 所有接口均以 /api 为前缀 · 除标注"公开"外均需 Bearer Token</p>
+</div>
+
+<div class="container">
+
+<div class="base-url">Base URL: <span style="color:var(--green)">http://localhost:8080</span></div>
+
+<!-- 用户模块 -->
+<div class="section">
+<h2>📦 用户模块 — /api/user</h2>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method post">POST</span>
+<span class="ep-path">/api/user/login</span>
+<span class="ep-summary">用户登录</span><span class="tag public">公开</span>
+</div>
+<div class="ep-body">
+<h4>Request Body (JSON)</h4>
+<code>{"username": "admin", "password": "admin123"}</code>
+<h4>Response</h4>
+<code>{"code": 200, "data": {"token": "eyJ...", "nickname": "管理员"}, "message": "操作成功"}</code>
+</div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method post">POST</span>
+<span class="ep-path">/api/user/register</span>
+<span class="ep-summary">用户注册</span><span class="tag public">公开</span>
+</div>
+<div class="ep-body">
+<h4>Request Body (JSON)</h4>
+<code>{"username": "test", "password": "123456", "nickname": "测试", "email": "test@t.com"}</code>
+</div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method get">GET</span>
+<span class="ep-path">/api/user/info</span>
+<span class="ep-summary">获取当前用户信息</span><span class="tag auth">认证</span>
+</div>
+<div class="ep-body">
+<h4>Headers</h4>
+<code>Authorization: Bearer {token}</code>
+</div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method put">PUT</span>
+<span class="ep-path">/api/user/password</span>
+<span class="ep-summary">修改密码</span><span class="tag auth">认证</span>
+</div>
+<div class="ep-body">
+<h4>Request Body</h4>
+<code>{"oldPassword": "admin123", "newPassword": "new123456"}</code>
+</div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method get">GET</span>
+<span class="ep-path">/api/user/list</span>
+<span class="ep-summary">用户列表（管理员）</span><span class="tag auth">认证</span>
+</div>
+<div class="ep-body"><h4>Query Params</h4><code>?current=1&size=10&keyword=admin</code></div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method put">PUT</span>
+<span class="ep-path">/api/user/status/{userId}</span>
+<span class="ep-summary">启用/禁用用户</span><span class="tag auth">认证</span>
+</div>
+<div class="ep-body"><h4>Request Body</h4><code>{"status": 1}</code></div>
+</div>
+</div>
+
+<!-- 活动模块 -->
+<div class="section">
+<h2>📅 活动模块 — /api/event</h2>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method get">GET</span>
+<span class="ep-path">/api/event/list</span>
+<span class="ep-summary">活动列表</span><span class="tag public">公开</span>
+</div>
+<div class="ep-body"><h4>Query Params</h4><code>?current=1&size=12&keyword=周杰伦</code></div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method get">GET</span>
+<span class="ep-path">/api/event/{id}</span>
+<span class="ep-summary">活动详情</span><span class="tag public">公开</span>
+</div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method post">POST</span>
+<span class="ep-path">/api/event</span>
+<span class="ep-summary">创建活动（管理员）</span><span class="tag auth">认证</span>
+</div>
+<div class="ep-body">
+<h4>Request Body</h4>
+<code>{"eventName":"周杰伦演唱会","venue":"鸟巢","startTime":"2026-07-15 19:00:00",
+"endTime":"2026-07-15 22:00:00","onSaleTime":"2026-07-01 10:00:00",
+"totalSeats":5000,"merchantId":1,"description":"..."}</code>
+</div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method put">PUT</span>
+<span class="ep-path">/api/event/{id}</span>
+<span class="ep-summary">编辑活动</span><span class="tag auth">认证</span>
+</div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method put">PUT</span>
+<span class="ep-path">/api/event/status/{id}</span>
+<span class="ep-summary">修改活动状态</span><span class="tag auth">认证</span>
+</div>
+<div class="ep-body"><h4>Request Body</h4><code>{"status": 1}</code> (0未开售 1热卖中 2已售罄 3已结束)</div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method delete">DELETE</span>
+<span class="ep-path">/api/event/{id}</span>
+<span class="ep-summary">删除活动</span><span class="tag auth">认证</span>
+</div>
+</div>
+</div>
+
+<!-- 订单模块 -->
+<div class="section">
+<h2>🛒 订单模块 — /api/order</h2>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method post">POST</span>
+<span class="ep-path">/api/order/seckill/{eventId}</span>
+<span class="ep-summary">秒杀抢票</span><span class="tag auth">认证</span>
+</div>
+<div class="ep-body">
+<h4>Query Params</h4>
+<code>?seatIds=1001,1002,1003</code> (1-5个座位ID，逗号分隔)
+<h4>Response (成功)</h4>
+<code>{"code":200,"data":{"success":true,"orderNo":"202606132035301234567890","message":"3张票出票处理中"}}</code>
+<h4>Response (库存不足)</h4>
+<code>{"code":409,"message":"库存不足，剩余票数不够"}</code>
+<h4>Response (重复购买)</h4>
+<code>{"code":409,"message":"您已抢过该活动的票，每人限购1单"}</code>
+</div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method get">GET</span>
+<span class="ep-path">/api/order/list</span>
+<span class="ep-summary">我的订单列表</span><span class="tag auth">认证</span>
+</div>
+<div class="ep-body"><h4>Query Params</h4><code>?current=1&size=10</code></div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method get">GET</span>
+<span class="ep-path">/api/order/{id}</span>
+<span class="ep-summary">订单详情</span><span class="tag auth">认证</span>
+</div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method put">PUT</span>
+<span class="ep-path">/api/order/cancel/{id}</span>
+<span class="ep-summary">取消/退款订单</span><span class="tag auth">认证</span>
+</div>
+<div class="ep-body">
+<h4>业务规则</h4>
+<code>待支付(0) → 取消 → 状态变2(已取消)，释放座位
+已支付(1) → 退款 → 状态变3(已退款)，释放座位，恢复Redis库存
+已取消(2) → 报错 5003
+已退款(3) → 报错 5004</code>
+</div>
+</div>
+</div>
+
+<!-- 座位模块 -->
+<div class="section">
+<h2>💺 座位模块 — /api/seat</h2>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method get">GET</span>
+<span class="ep-path">/api/seat/list/{eventId}</span>
+<span class="ep-summary">获取活动座位</span><span class="tag public">公开</span>
+</div>
+</div>
+
+<div class="endpoint">
+<div class="ep-header" onclick="this.nextElementSibling.classList.toggle('open')">
+<span class="ep-method post">POST</span>
+<span class="ep-path">/api/seat/batch</span>
+<span class="ep-summary">批量创建座位（管理员）</span><span class="tag auth">认证</span>
+</div>
+<div class="ep-body">
+<h4>Request Body</h4>
+<code>{"eventId":1,"sectionName":"A区","rowCount":5,"seatsPerRow":10,"price":380}</code>
+</div>
+</div>
+</div>
+
+<!-- 错误码 -->
+<div class="section">
+<h2>⚠️ 统一错误码</h2>
+<table class="params-table">
+<tr><th>错误码</th><th>HTTP状态</th><th>说明</th></tr>
+<tr><td>200</td><td>200</td><td>操作成功</td></tr>
+<tr><td>401</td><td>200</td><td>未登录或Token已过期</td></tr>
+<tr><td>403</td><td>200</td><td>无访问权限</td></tr>
+<tr><td>1001-1006</td><td>200</td><td>用户相关错误</td></tr>
+<tr><td>2001-2002</td><td>200</td><td>角色/权限错误</td></tr>
+<tr><td>3001-3003</td><td>200</td><td>活动相关错误</td></tr>
+<tr><td>4001-4002</td><td>200</td><td>座位相关错误</td></tr>
+<tr><td>5001-5005</td><td>200</td><td>订单相关错误</td></tr>
+<tr><td>6001-6003</td><td>200</td><td>秒杀相关错误</td></tr>
+</table>
+</div>
+
+</div>
+
+<script>
+document.querySelectorAll('.ep-header').forEach(h => {
+  h.addEventListener('click', () => h.nextElementSibling.classList.toggle('open'))
+})
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:8080/api/user/login -X POST -H \"Content-Type: application/json\" -d \"{\\\\\"username\\\\\":\\\\\"admin\\\\\",\\\\\"password\\\\\":\\\\\"admin123\\\\\"}\")",
+      "Bash(curl -s -X POST http://localhost:8080/api/payment/create -H \"Content-Type: application/json\" -d '{\"orderId\":1,\"method\":\"alipay\",\"amount\":580}')",
+      "Bash(netstat -ano)",
+      "Bash(nohup ./mvnw spring-boot:run)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(grep -c \"Started TicketflowApplication\" /tmp/ticketflow.log)"
+    ]
+  }
+}

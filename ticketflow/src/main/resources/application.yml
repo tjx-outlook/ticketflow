@@ -1,0 +1,125 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ticketflow
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/ticketflow?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 30000
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 200
+          max-idle: 50
+          min-idle: 10
+          max-wait: 3000ms
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+
+  sql:
+    init:
+      mode: never
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.yourname.ticketflow.modules.*.entity
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# JWT
+jwt:
+  secret: dGhpcy1pcy1hLXZlcnktbG9uZy1zZWNyZXQta2V5LWZvci10aWNrZXRmbG93LWFwcGxpY2F0aW9u
+  expiration: 86400000
+
+# Knife4j
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+# Thread Pool
+async:
+  executor:
+    core-pool-size: 10
+    max-pool-size: 50
+    queue-capacity: 1000
+    keep-alive-seconds: 60
+    thread-name-prefix: async-order-
+
+# Redis — 设为 true 激活秒杀功能
+redis:
+  enabled: true
+
+# File Upload
+upload:
+  path: e:/ticketflow/ticketflow/uploads
+  url-prefix: /uploads
+
+# Payment — 支付宝沙箱 Native 支付
+#
+# ============ 完整支付流程 ============
+# 1. 用户选座 → 秒杀创建待支付订单
+# 2. 前端调用 POST /api/payment/create → 后端调用 alipay.trade.precreate → 返回真实支付宝二维码
+# 3. 用户扫码 → 支付宝App支付
+# 4. 支付宝服务器 POST 异步通知到 notify-url → serveo隧道 → 本地后端
+# 5. 后端验签 → 确认订单 → 返回 "success"
+# 6. 前端每3秒轮询 GET /api/payment/status/{orderNo} → 检测到已支付 → 弹窗关闭
+#
+# ============ serveo.net 隧道使用 ============
+# 终端执行: ssh -R 80:localhost:8080 serveo.net
+# 得到: https://xxxx.serveo.net
+# 将下面的 notify-url 改为: https://xxxx.serveo.net/api/payment/alipay/notify
+# 每次隧道重连域名会变，需要同步更新此配置
+#
+payment:
+  # 支付宝沙箱 https://open.alipay.com/develop/sandbox/app
+  alipay:
+    enabled: true
+    app-id: 9021000164673197
+    private-key: keys/app_private_key.pem
+    alipay-public-key: keys/alipay_public_key.pem
+    # ⚠️ 使用 serveo 隧道时改为: https://xxxx.serveo.net/api/payment/alipay/notify
+    notify-url: https://b0e8e75ce6a4942b-223-104-84-106.serveousercontent.com/api/payment/alipay/notify
+    gateway: https://openapi-sandbox.dl.alipaydev.com/gateway.do
+# Logging
+logging:
+  level:
+    com.yourname.ticketflow: debug
+    org.springframework.security: warn

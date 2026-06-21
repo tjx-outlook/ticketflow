@@ -1,0 +1,248 @@
+/* ===== TicketFlow Global Styles ===== */
+:root {
+  --blue-50:  #eff6ff;
+  --blue-100: #dbeafe;
+  --blue-200: #bfdbfe;
+  --blue-400: #60a5fa;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+  --blue-700: #1d4ed8;
+  --blue-800: #1e40af;
+  --green-50:  #f0fdf4;
+  --green-100: #dcfce7;
+  --green-400: #4ade80;
+  --green-500: #22c55e;
+  --green-600: #16a34a;
+  --green-700: #15803d;
+  --slate-50:  #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+  --white:    #ffffff;
+  --amber-500: #f59e0b;
+  --red-500:  #ef4444;
+  --red-600:  #dc2626;
+  --radius-sm: 6px;
+  --radius:    8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+  --shadow:    0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.05), 0 2px 4px rgba(0,0,0,.04);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,.06), 0 4px 10px rgba(0,0,0,.04);
+  --shadow-xl: 0 20px 50px rgba(0,0,0,.1);
+  --transition: 0.2s cubic-bezier(.4,0,.2,1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', 'Noto Serif SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--slate-700);
+  background: var(--slate-50);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
+#app { width: 100%; min-height: 100vh; }
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--slate-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--slate-400); }
+
+/* ===== Page Layout ===== */
+.page-container {
+  padding: 28px 32px;
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  min-height: calc(100vh - 132px);
+  box-shadow: var(--shadow-sm);
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.page-header h2 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--slate-800);
+  letter-spacing: -0.3px;
+}
+
+.search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+/* ===== Utility ===== */
+.text-danger  { color: var(--red-500); }
+.text-success { color: var(--green-600); }
+.text-warning { color: var(--amber-500); }
+.text-info    { color: var(--slate-400); }
+
+.flex-center { display: flex; align-items: center; justify-content: center; }
+
+/* ===== Element Plus Overrides ===== */
+
+/* Buttons */
+.el-button--primary {
+  --el-button-bg-color: var(--blue-600);
+  --el-button-border-color: var(--blue-600);
+  --el-button-hover-bg-color: var(--blue-700);
+  --el-button-hover-border-color: var(--blue-700);
+  --el-button-active-bg-color: var(--blue-800);
+  --el-button-active-border-color: var(--blue-800);
+  border-radius: var(--radius);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  transition: all var(--transition);
+}
+
+.el-button--success {
+  --el-button-bg-color: var(--green-600);
+  --el-button-border-color: var(--green-600);
+  border-radius: var(--radius);
+}
+
+.el-button { border-radius: var(--radius); font-weight: 500; }
+
+/* Tables */
+.el-table {
+  --el-table-border-color: var(--slate-200);
+  --el-table-header-bg-color: var(--slate-50);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.el-table th.el-table__cell {
+  background: var(--slate-50);
+  color: var(--slate-600);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--slate-200);
+}
+
+.el-table .el-table__row:hover > td.el-table__cell {
+  background: var(--blue-50);
+}
+
+/* Cards */
+.el-card {
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--slate-200) !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: box-shadow var(--transition);
+}
+
+.el-card:hover { box-shadow: var(--shadow-md) !important; }
+
+/* Dialogs */
+.el-dialog {
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--slate-100);
+}
+
+.el-dialog__title {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--slate-800);
+}
+
+.el-dialog__body { padding: 24px; }
+
+.el-dialog__footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--slate-100);
+}
+
+/* Inputs */
+.el-input__wrapper {
+  border-radius: var(--radius) !important;
+  box-shadow: 0 0 0 1px var(--slate-200) inset !important;
+  transition: all var(--transition);
+}
+
+.el-input__wrapper:hover { box-shadow: 0 0 0 1px var(--slate-300) inset !important; }
+
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--blue-500) inset !important;
+}
+
+.el-input__inner { font-size: 14px; }
+
+/* Select */
+.el-select .el-input__wrapper { border-radius: var(--radius) !important; }
+
+/* Tags */
+.el-tag {
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+/* Pagination */
+.el-pagination { --el-pagination-button-bg-color: var(--white); }
+
+.el-pagination .el-pager li.is-active {
+  background: var(--blue-600) !important;
+  border-radius: var(--radius-sm);
+}
+
+/* Tabs */
+.el-tabs__item.is-active { color: var(--blue-600); font-weight: 600; }
+.el-tabs__active-bar { background-color: var(--blue-600); }
+
+/* Menu */
+.el-menu { border-right: none !important; }
+
+/* Breadcrumb */
+.el-breadcrumb__inner { font-weight: 500 !important; }
+
+/* Form */
+.el-form-item__label { font-weight: 500; color: var(--slate-600); font-size: 13px; }
+
+/* Divider */
+.el-divider--vertical { height: 24px; border-left: 1px solid var(--slate-200); }
+
+/* Avatar dropdown */
+.el-dropdown-menu { border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); border: 1px solid var(--slate-100); }
+.el-dropdown-menu__item { padding: 10px 16px; font-size: 13px; display: flex; align-items: center; gap: 8px; border-radius: 6px; margin: 2px 6px; }
+.el-dropdown-menu__item:hover { background: var(--blue-50); color: var(--blue-600); }
+
+/* Date picker */
+.el-date-editor { --el-date-editor-width: 100%; }
+
+/* Tree */
+.el-tree-node__content:hover { background: var(--blue-50); }
+
+/* Checkbox */
+.el-checkbox__input.is-checked .el-checkbox__inner {
+  background: var(--blue-600);
+  border-color: var(--blue-600);
+}
+
+/* Empty state */
+.el-empty__description { color: var(--slate-400); }
