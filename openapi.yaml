@@ -1,0 +1,1116 @@
+openapi: 3.0.3
+info:
+  title: TicketFlow 票务系统 API
+  description: |
+    高并发票务秒杀系统，支持活动管理、SVG 选座、Redis 分布式锁秒杀、
+    支付宝沙箱支付、RBAC 权限控制、多租户数据隔离。
+  version: 1.0.0
+  contact:
+    name: TicketFlow Team
+
+servers:
+  - url: http://localhost:8080
+    description: 本地开发环境
+  - url: https://xxx.serveo.net
+    description: serveo 公网隧道（支付宝回调用）
+
+tags:
+  - name: 用户认证
+    description: 登录、注册、个人信息
+  - name: 活动管理
+    description: 活动 CRUD 与状态管理
+  - name: 座位管理
+    description: 座位查询与批量创建
+  - name: 订单秒杀
+    description: 秒杀抢票、订单查询、取消、支付确认
+  - name: 支付
+    description: 支付宝沙箱 Native 支付
+  - name: 票务管理
+    description: 电子票查询与核销
+  - name: 商家管理
+    description: 商家 CRUD
+  - name: 角色管理
+    description: 角色与用户分配
+  - name: 权限管理
+    description: 权限与角色分配
+  - name: 数据统计
+    description: 销售数据汇总
+  - name: 系统字典
+    description: 字典类型与数据
+  - name: 文件上传
+    description: 图片上传
+
+# ==================== 安全定义 ====================
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Token，登录接口获取
+
+  # ==================== 通用响应模型 ====================
+  schemas:
+    # 统一响应体
+    Result:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 业务状态码，200=成功
+        message:
+          type: string
+          description: 提示信息
+        data:
+          description: 响应数据
+        timestamp:
+          type: string
+          description: 时间戳
+
+    # ===== 用户 =====
+    LoginDTO:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, description: 用户名, example: admin }
+        password: { type: string, description: 密码, example: admin123 }
+
+    LoginVO:
+      type: object
+      properties:
+        token: { type: string, description: JWT Token }
+        userId: { type: string, description: 用户ID（雪花ID，序列化为字符串） }
+        username: { type: string }
+        nickname: { type: string }
+
+    RegisterDTO:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 50 }
+        password: { type: string, minLength: 6, maxLength: 32 }
+        nickname: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+
+    UserVO:
+      type: object
+      properties:
+        id: { type: string }
+        username: { type: string }
+        nickname: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        status: { type: integer }
+        roles: { type: array, items: { type: string } }
+        permissions: { type: array, items: { type: string } }
+        createTime: { type: string, format: date-time }
+
+    # ===== 活动 =====
+    Event:
+      type: object
+      properties:
+        id: { type: string }
+        eventName: { type: string, description: 活动名称 }
+        merchantId: { type: string, description: 商家ID }
+        venue: { type: string, description: 场馆 }
+        description: { type: string }
+        posterUrl: { type: string, description: 海报图片URL }
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time }
+        onSaleTime: { type: string, format: date-time, description: 开售时间 }
+        totalSeats: { type: integer, description: 总座位数 }
+        status:
+          type: integer
+          description: '0=未开售, 1=热卖中, 2=已售罄, 3=已结束, 4=已取消'
+
+    EventDTO:
+      type: object
+      required: [eventName, merchantId, venue, startTime, endTime, onSaleTime, totalSeats]
+      properties:
+        eventName: { type: string }
+        merchantId: { type: string }
+        venue: { type: string }
+        description: { type: string }
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time }
+        onSaleTime: { type: string, format: date-time }
+        totalSeats: { type: integer }
+
+    # ===== 座位 =====
+    Seat:
+      type: object
+      properties:
+        id: { type: string }
+        eventId: { type: string }
+        sectionName: { type: string, description: 区域名称, example: VIP区 }
+        rowNum: { type: integer, description: 排号 }
+        seatNum: { type: integer, description: 座号 }
+        price: { type: number, description: 价格 }
+        status:
+          type: integer
+          description: '0=可选, 1=已锁定, 2=已售出'
+
+    SeatBatchDTO:
+      type: object
+      properties:
+        eventId: { type: string }
+        sectionName: { type: string }
+        rowCount: { type: integer }
+        seatsPerRow: { type: integer }
+        price: { type: number }
+
+    # ===== 订单 =====
+    SeckillResultVO:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        orderNo: { type: string, description: 订单号 }
+
+    OrderInfo:
+      type: object
+      properties:
+        id: { type: string }
+        orderNo: { type: string, description: 订单号 }
+        userId: { type: string }
+        eventId: { type: string }
+        totalAmount: { type: number, description: 订单总额 }
+        seatCount: { type: integer, description: 座位数量 }
+        status:
+          type: integer
+          description: '0=待支付, 1=已支付, 2=已取消, 3=已退款'
+        payTime: { type: string, format: date-time }
+        createTime: { type: string, format: date-time }
+
+    # ===== 支付 =====
+    PaymentCreateDTO:
+      type: object
+      properties:
+        orderNo: { type: string, description: 订单号 }
+        amount: { type: string, description: 金额（字符串，保留2位小数）, example: "380.00" }
+        method: { type: string, description: 支付方式, example: alipay }
+
+    PaymentCreateVO:
+      type: object
+      properties:
+        qrUrl: { type: string, description: 支付宝二维码URL }
+        orderNo: { type: string }
+        method: { type: string }
+        amount: { type: string }
+
+    PaymentStatusVO:
+      type: object
+      properties:
+        orderNo: { type: string }
+        status: { type: integer }
+        payTime: { type: string, format: date-time }
+
+    PaymentDebugVO:
+      type: object
+      properties:
+        orderNo: { type: string }
+        amount: { type: string }
+        qrUrl: { type: string }
+        isRealQr: { type: boolean, description: 是否为真实支付宝二维码 }
+
+    # ===== 票务 =====
+    Ticket:
+      type: object
+      properties:
+        id: { type: string }
+        ticketNo: { type: string }
+        orderId: { type: string }
+        orderNo: { type: string }
+        userId: { type: string }
+        eventId: { type: string }
+        seatId: { type: string }
+        qrCode: { type: string, description: 电子票二维码内容 }
+        status:
+          type: integer
+          description: '0=未使用, 1=已核销, 2=已退款'
+        checkTime: { type: string, format: date-time }
+
+    # ===== 商家 =====
+    Merchant:
+      type: object
+      properties:
+        id: { type: string }
+        merchantName: { type: string }
+        contactName: { type: string }
+        contactPhone: { type: string }
+        contactEmail: { type: string }
+        address: { type: string }
+        description: { type: string }
+        status: { type: integer }
+
+    # ===== 角色 =====
+    SysRole:
+      type: object
+      properties:
+        id: { type: string }
+        roleName: { type: string }
+        roleCode: { type: string }
+        description: { type: string }
+        sort: { type: integer }
+        status: { type: integer }
+
+    # ===== 权限 =====
+    SysPermission:
+      type: object
+      properties:
+        id: { type: string }
+        parentId: { type: string }
+        permissionName: { type: string }
+        permissionCode: { type: string }
+        type: { type: integer, description: '1=菜单, 2=按钮, 3=API' }
+        url: { type: string }
+        method: { type: string }
+        icon: { type: string }
+        sort: { type: integer }
+        status: { type: integer }
+        children:
+          type: array
+          items: { $ref: '#/components/schemas/SysPermission' }
+
+    # ===== 统计 =====
+    SalesSummary:
+      type: object
+      properties:
+        eventName: { type: string }
+        orderCount: { type: integer }
+        ticketCount: { type: integer }
+        revenue: { type: number }
+
+    TotalSummary:
+      type: object
+      properties:
+        totalOrders: { type: integer }
+        totalRevenue: { type: number }
+        eventCount: { type: integer }
+
+    # ===== 字典 =====
+    DictType:
+      type: object
+      properties:
+        id: { type: string }
+        dictName: { type: string }
+        dictType: { type: string }
+        status: { type: integer }
+
+    DictData:
+      type: object
+      properties:
+        id: { type: string }
+        dictLabel: { type: string }
+        dictValue: { type: string }
+        cssClass: { type: string }
+        sort: { type: integer }
+
+    # ===== 通用 =====
+    PageResult:
+      type: object
+      properties:
+        records: { type: array }
+        total: { type: integer }
+        size: { type: integer }
+        current: { type: integer }
+        pages: { type: integer }
+
+  # ==================== 请求头参数 ====================
+  parameters:
+    TenantId:
+      name: X-Tenant-Id
+      in: header
+      schema: { type: string, default: "1" }
+      description: 租户ID（多租户隔离）
+
+# ================================================================
+#                           接口定义
+# ================================================================
+paths:
+
+  # ==================== 用户认证 ====================
+  /api/user/login:
+    post:
+      tags: [用户认证]
+      summary: 用户登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginDTO' }
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/LoginVO' }
+
+  /api/user/register:
+    post:
+      tags: [用户认证]
+      summary: 用户注册
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterDTO' }
+      responses:
+        '200':
+          description: 注册成功，自动登录
+
+  /api/user/info:
+    get:
+      tags: [用户认证]
+      summary: 获取当前用户信息（含角色和权限）
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/UserVO' }
+
+  /api/user/password:
+    put:
+      tags: [用户认证]
+      summary: 修改密码
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [oldPassword, newPassword]
+              properties:
+                oldPassword: { type: string }
+                newPassword: { type: string, minLength: 6, maxLength: 32 }
+      responses:
+        '200': { description: 修改成功 }
+
+  /api/user/list:
+    get:
+      tags: [用户认证]
+      summary: 用户列表（需要 user:list 权限）
+      parameters:
+        - { name: current, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/PageResult' }
+
+  /api/user/status/{userId}:
+    put:
+      tags: [用户认证]
+      summary: 启用/禁用用户（需要 user:manage 权限）
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: integer, description: '1=启用, 0=禁用' }
+      responses:
+        '200': { description: 操作成功 }
+
+  # ==================== 活动管理 ====================
+  /api/event/list:
+    get:
+      tags: [活动管理]
+      summary: 活动列表（首页，公开）
+      parameters:
+        - { name: current, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 10 } }
+        - { name: keyword, in: query, schema: { type: string }, description: 搜索关键词 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/PageResult' }
+
+  /api/event/{id}:
+    get:
+      tags: [活动管理]
+      summary: 活动详情（公开）
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/Event' }
+
+    put:
+      tags: [活动管理]
+      summary: 更新活动（需要 event:manage 权限）
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventDTO' }
+      responses:
+        '200': { description: 更新成功 }
+
+    delete:
+      tags: [活动管理]
+      summary: 删除活动（需要 event:manage 权限）
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 删除成功 }
+
+  /api/event/{id}/status:
+    put:
+      tags: [活动管理]
+      summary: 更新活动状态（需要 event:manage 权限）
+      description: |
+        设置为 1（热卖中）时自动在 Redis 初始化秒杀库存：
+        `seckill:stock:{eventId} = totalSeats`
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: integer
+                  description: '1=热卖中, 2=已售罄, 3=已结束, 4=已取消'
+      responses:
+        '200': { description: 更新成功 }
+
+  /api/event:
+    post:
+      tags: [活动管理]
+      summary: 创建活动（需要 event:manage 权限）
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventDTO' }
+      responses:
+        '200': { description: 创建成功 }
+
+  # ==================== 座位管理 ====================
+  /api/seat/list/{eventId}:
+    get:
+      tags: [座位管理]
+      summary: 活动座位列表（公开，选座页面用）
+      parameters:
+        - { name: eventId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Seat' }
+
+  /api/seat/page/{eventId}:
+    get:
+      tags: [座位管理]
+      summary: 座位分页列表（需要 seat:manage 或 event:manage 权限）
+      parameters:
+        - { name: eventId, in: path, required: true, schema: { type: string } }
+        - { name: current, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 50 } }
+      responses:
+        '200': { description: 成功 }
+
+  /api/seat/batch:
+    post:
+      tags: [座位管理]
+      summary: 批量创建座位（需要 seat:manage 或 event:manage 权限）
+      description: |
+        自动生成 rowCount × seatsPerRow 个座位，
+        并更新 Redis 库存：`INCRBY seckill:stock:{eventId} N`
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SeatBatchDTO' }
+      responses:
+        '200': { description: 创建成功 }
+
+  # ==================== 订单秒杀（核心） ====================
+  /api/order/seckill/{eventId}:
+    post:
+      tags: [订单秒杀]
+      summary: 秒杀抢票（需要登录）
+      description: |
+        **核心接口，完整流程：**
+        1. Redis Set 快速去重检查 + DB hasPaidOrder() 兜底验证
+        2. Redisson 分布式锁 `seckill:lock:{eventId}`（tryLock 3s 等待, 10s TTL）
+        3. 锁内二次校验 → Redis DECR 原子扣库存
+        4. 异步创建订单（线程池 orderAsyncExecutor）
+           - 乐观锁占座：`UPDATE seat SET status=1 WHERE id=? AND status=0`
+           - 插入 OrderInfo（status=0 待支付）、OrderItem、Ticket
+           - 失败则回滚 Redis 库存和用户标识
+        5. 立即返回 orderNo
+
+        **每人每场限购 1 单**（仅限已支付，取消后可重新购买）
+        **每次最多选 5 个座位**，不指定则自动选最低价座位
+      parameters:
+        - { name: eventId, in: path, required: true, schema: { type: string } }
+        - { name: seatIds, in: query, schema: { type: array, items: { type: string } },
+            description: 座位ID列表（逗号分隔），不传则自动选最优 }
+      responses:
+        '200':
+          description: 秒杀成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/SeckillResultVO' }
+        '409':
+          description: 秒杀失败（已购过/库存不足/系统繁忙）
+
+  /api/order/list:
+    get:
+      tags: [订单秒杀]
+      summary: 我的订单列表（需要登录）
+      description: 查询前会自动作废该用户所有超时未支付订单（>10分钟）
+      parameters:
+        - { name: current, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 10 } }
+        - { name: status, in: query, schema: { type: integer },
+            description: '筛选：0=待支付, 1=已支付, 2=已取消, 3=已退款' }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/PageResult' }
+
+  /api/order/{id}:
+    get:
+      tags: [订单秒杀]
+      summary: 订单详情
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/OrderInfo' }
+
+  /api/order/cancel/{orderNo}:
+    put:
+      tags: [订单秒杀]
+      summary: 取消/退款订单（需要登录）
+      description: |
+        使用订单号而非数据库ID，避免 JavaScript Long 精度丢失。
+        待支付 → 取消（status=2），已支付 → 退款（status=3）。
+        自动释放座位、删除票、恢复 Redis 库存和用户标识。
+        超时订单会自动作废而非提示错误。
+      parameters:
+        - { name: orderNo, in: path, required: true, schema: { type: string },
+            description: 订单号（非数据库ID） }
+      responses:
+        '200': { description: 操作成功 }
+
+  /api/order/pay/{orderNo}:
+    put:
+      tags: [订单秒杀]
+      summary: 支付确认（手动兜底）
+      description: |
+        手动确认支付。正常流程应通过支付宝回调自动确认。
+        超过支付时限的订单会被拒绝。
+      parameters:
+        - { name: orderNo, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 支付成功 }
+
+  /api/order/check-paid:
+    get:
+      tags: [订单秒杀]
+      summary: 检查该活动是否有已支付订单
+      description: 仅检查 status=1（已支付），取消/退款的订单不限制
+      parameters:
+        - { name: eventId, in: query, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { type: boolean, description: 'true=已有支付订单，不允许再买' }
+
+  # ==================== 支付 ====================
+  /api/payment/create:
+    post:
+      tags: [支付]
+      summary: 创建支付二维码
+      description: |
+        调用支付宝 `alipay.trade.precreate` 生成 Native 支付二维码。
+        请求参数需用 RSA2 + SHA256withRSA 签名。
+        失败时返回降级二维码。
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PaymentCreateDTO' }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/PaymentCreateVO' }
+
+  /api/payment/status/{orderNo}:
+    get:
+      tags: [支付]
+      summary: 查询支付状态（前端轮询用）
+      description: 前端每 3 秒轮询，支付成功后自动跳转订单页。查询前会检查并作废超时订单。
+      security: []
+      parameters:
+        - { name: orderNo, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/PaymentStatusVO' }
+
+  /api/payment/alipay/notify:
+    post:
+      tags: [支付]
+      summary: 支付宝异步通知回调
+      description: |
+        支付宝支付成功后将 POST 到此接口（通过 serveo 隧道）。
+        验签（RSA2 + 支付宝公钥）→ 确认订单 → 返回 "success"。
+        开发环境无公钥时降级放行。
+      security: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                trade_status: { type: string, description: 'TRADE_SUCCESS 表示支付成功' }
+                out_trade_no: { type: string, description: 商户订单号 }
+                total_amount: { type: string }
+                trade_no: { type: string, description: 支付宝交易号 }
+                sign: { type: string, description: RSA2 签名 }
+                sign_type: { type: string, description: 签名算法 }
+      responses:
+        '200':
+          description: 返回 "success" 或 "fail"
+
+  /api/payment/debug:
+    get:
+      tags: [支付]
+      summary: 支付宝连通性调试
+      description: 测试支付宝 API 是否可达，返回二维码真伪判断
+      security: []
+      parameters:
+        - { name: amount, in: query, schema: { type: string, default: "0.01" },
+            description: 测试金额 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/PaymentDebugVO' }
+
+  # ==================== 票务管理 ====================
+  /api/ticket/list:
+    get:
+      tags: [票务管理]
+      summary: 我的电子票（需要登录）
+      parameters:
+        - { name: current, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/PageResult' }
+
+  /api/ticket/{id}:
+    get:
+      tags: [票务管理]
+      summary: 电子票详情
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/Ticket' }
+
+  /api/ticket/check/{ticketNo}:
+    put:
+      tags: [票务管理]
+      summary: 核销电子票（需要 ticket:manage 权限）
+      parameters:
+        - { name: ticketNo, in: path, required: true, schema: { type: string },
+            description: 票号 }
+      responses:
+        '200': { description: 核销成功，status 变为 1 }
+
+  # ==================== 商家管理 ====================
+  /api/merchant/list:
+    get:
+      tags: [商家管理]
+      summary: 商家列表（需要 merchant:manage 权限）
+      parameters:
+        - { name: current, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200': { description: 成功 }
+
+  /api/merchant/{id}:
+    get:
+      tags: [商家管理]
+      summary: 商家详情（公开，下拉选择用）
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/Merchant' }
+
+  /api/merchant:
+    post:
+      tags: [商家管理]
+      summary: 创建商家（需要 merchant:manage 权限）
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Merchant' }
+      responses:
+        '200': { description: 创建成功 }
+
+    put:
+      tags: [商家管理]
+      summary: 更新商家（需要 merchant:manage 权限）
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Merchant' }
+      responses:
+        '200': { description: 更新成功 }
+
+  /api/merchant/{id}:
+    delete:
+      tags: [商家管理]
+      summary: 删除商家（需要 merchant:manage 权限）
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 删除成功 }
+
+  # ==================== 角色管理 ====================
+  /api/role/list:
+    get:
+      tags: [角色管理]
+      summary: 角色分页列表（需要 role:manage 权限）
+      parameters:
+        - { name: current, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200': { description: 成功 }
+
+  /api/role/all:
+    get:
+      tags: [角色管理]
+      summary: 所有启用角色（分配角色下拉用）
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/SysRole' }
+
+  /api/role:
+    post:
+      tags: [角色管理]
+      summary: 创建角色（需要 role:manage 权限）
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SysRole' }
+      responses:
+        '200': { description: 创建成功 }
+
+    put:
+      tags: [角色管理]
+      summary: 更新角色（需要 role:manage 权限）
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SysRole' }
+      responses:
+        '200': { description: 更新成功 }
+
+  /api/role/assign/{userId}:
+    post:
+      tags: [角色管理]
+      summary: 为用户分配角色（需要 role:manage 权限）
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roleIds:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200': { description: 分配成功 }
+
+  /api/role/user/{userId}:
+    get:
+      tags: [角色管理]
+      summary: 获取用户已有角色ID列表
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 成功 }
+
+  # ==================== 权限管理 ====================
+  /api/permission/tree:
+    get:
+      tags: [权限管理]
+      summary: 权限树（需要 permission:manage 权限）
+      description: 返回树形结构（通过 parentId 构建父子关系）
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/SysPermission' }
+
+  /api/permission:
+    post:
+      tags: [权限管理]
+      summary: 创建权限（需要 permission:manage 权限）
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SysPermission' }
+      responses:
+        '200': { description: 创建成功 }
+
+  /api/permission/assign/{roleId}:
+    post:
+      tags: [权限管理]
+      summary: 为角色分配权限（需要 permission:manage 权限）
+      parameters:
+        - { name: roleId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permissionIds:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200': { description: 分配成功 }
+
+  /api/permission/role/{roleId}:
+    get:
+      tags: [权限管理]
+      summary: 获取角色已有权限ID列表
+      parameters:
+        - { name: roleId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 成功 }
+
+  # ==================== 数据统计 ====================
+  /api/statistics/sales/{eventId}:
+    get:
+      tags: [数据统计]
+      summary: 单活动销售汇总（需要 statistics:view 权限）
+      parameters:
+        - { name: eventId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/SalesSummary' }
+
+  /api/statistics/sales/total:
+    get:
+      tags: [数据统计]
+      summary: 全局销售汇总（需要 statistics:view 权限）
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/TotalSummary' }
+
+  # ==================== 系统字典 ====================
+  /api/system/dict/types:
+    get:
+      tags: [系统字典]
+      summary: 所有字典类型（公开）
+      security: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/DictType' }
+
+  /api/system/dict/data/{dictType}:
+    get:
+      tags: [系统字典]
+      summary: 字典数据（公开）
+      parameters:
+        - { name: dictType, in: path, required: true, schema: { type: string },
+            description: 字典类型编码 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/DictData' }
+
+  # ==================== 文件上传 ====================
+  /api/upload/image:
+    post:
+      tags: [文件上传]
+      summary: 上传图片
+      description: 支持 jpg/png/gif，最大 5MB
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 上传成功，返回文件URL
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Result' }
+                  - properties:
+                      data: { type: string, description: 文件访问URL }
